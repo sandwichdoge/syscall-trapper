@@ -73,43 +73,39 @@ int print_syscall_info(pid_t pid, struct user_regs_struct *regs)
 
         switch (regs->orig_rax) {
         case SYS_READ:
-                printf("READ syscall on fd:%d\n", regs->rdi);
+                printf("READ syscall on fd:%d", regs->rdi);
                 break;
         case SYS_WRITE:
-                printf("WRITE syscall on fd:%d\n", regs->rdi);
+                printf("WRITE syscall on fd:%d", regs->rdi);
                 break;
         case SYS_OPEN:
                 printf("OPEN syscall on file:");
                 peek_str(pid, regs->rdi);
-                printf("\n");
                 break;
         case SYS_CLOSE:
-                printf("CLOSE syscall on fd: %d\n", regs->rdi);
+                printf("CLOSE syscall on fd: %d", regs->rdi);
                 break;
         case SYS_STAT:
                 printf("STAT syscall on file:");
                 peek_str(pid, regs->rdi);
-                printf("\n");
                 break;
         case SYS_ACCESS:
                 printf("ACCESS syscall on file:");
                 peek_str(pid, regs->rdi);
-                printf("\n");
                 break;
         case SYS_CREAT:
                 printf("CREAT syscall on file:");
                 peek_str(pid, regs->rdi);
-                printf("\n");
                 break;
         case SYS_OPENAT:
                 printf("OPENAT syscall on file:");
                 peek_str(pid, regs->rsi);
-                printf("\n");
                 break;
         default:
-                printf("Unhandled syscall: %d\n", regs->orig_rax);
+                printf("Unhandled syscall: %d", regs->orig_rax);
                 break;
         }
+        printf("\n");
 
         return 0;
 }
