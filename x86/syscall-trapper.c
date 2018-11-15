@@ -28,7 +28,8 @@ int PRINT_BUFFER = 0; //print read/written data
 int main(int argc, char **argv)
 {
         char **cmd = argv + 1;
-        int status;
+        int status = 0;
+        int follow_up = 0; //follow up to print result
 
         pid_t pid = fork();
         switch (pid) {
@@ -54,14 +55,14 @@ int main(int argc, char **argv)
                         struct user_regs_struct regs;
 
                         ptrace(PTRACE_GETREGS, pid, 0, &regs);
-                        print_syscall_info(pid, &regs);
+                        follow_up = print_syscall_info(pid, &regs);
 
                         /*Execute syscall and stop right before return*/
                         ptrace(PTRACE_SYSCALL, pid, 0, 0);
                         waitpid(pid, &status, 0);
 
                         ptrace(PTRACE_GETREGS, pid, 0, &regs);
-                        //printf("Got retval: %d\n\n", regs.rax);
+                        if (follow_up) printf("Returned: %d\n", regs.rax);
                         //[WE CAN INTERCEPT RETURN VALUE HERE]
                         
                         if (WIFEXITED(status)) break; //child exited
@@ -74,6 +75,7 @@ int main(int argc, char **argv)
 
 int print_syscall_info(pid_t pid, struct user_regs_struct *regs)
 {
+        int follow_up = 0; //follow up to print result later, usually used when fd is returned
         switch (regs->orig_rax) {
         case SYS_READ:
                 printf("READ %d bytes on fd:%d", regs->rdx, regs->rdi);
@@ -86,19 +88,20 @@ int print_syscall_info(pid_t pid, struct user_regs_struct *regs)
         case SYS_OPEN:
                 printf("OPEN syscall on file:");
                 peek_str(pid, regs->rdi);
+                follow_up = 1;
                 break;
         case SYS_CLOSE:
-                printf("CLOSE syscall on fd: %d", regs->rdi);
+                printf("CLOSE syscall on fd:%d", regs->rdi);
                 break;
         case SYS_STAT:
                 printf("STAT syscall on file:");
                 peek_str(pid, regs->rdi);
                 break;
         case SYS_FSTAT:
-                printf("FSTAT syscall on fd:", regs->rdi);
+                printf("FSTAT syscall on fd:%d", regs->rdi);
                 break;
         case SYS_LSEEK:
-                printf("LSEEK syscall on fd: %d", regs->rdi);
+                printf("LSEEK syscall on fd:%d", regs->rdi);
                 break;
         case SYS_MMAP:
                 printf("MMAP syscall at %ld", regs->rdi);
@@ -110,25 +113,26 @@ int print_syscall_info(pid_t pid, struct user_regs_struct *regs)
                 printf("BRK syscall");
                 break;
         case SYS_IOCTL:
-                printf("IOCTL syscall on fd: %d, cmd: %d, arg: %ld", regs->rdi, regs->rsi, regs->rdx);
+                printf("IOCTL syscall on fd:%d, cmd: %d, arg: %ld", regs->rdi, regs->rsi, regs->rdx);
                 break;
         case SYS_ACCESS: //21
                 printf("ACCESS syscall on file:");
                 peek_str(pid, regs->rdi);
                 break;
         case SYS_DUP2: //33
-                printf("DUP2 syscall, old fd: %d, new fd: %d", regs->rdi, regs->rsi);
+                printf("DUP2 syscall, old fd:%d, new fd:%d", regs->rdi, regs->rsi);
                 break;
         case SYS_FCNTL: //72
-                printf("IOCTL syscall on fd: %d, cmd: %d, arg: %ld", regs->rdi, regs->rsi, regs->rdx);
+                printf("FCNTL syscall on fd:%d, cmd: %d, arg: %ld", regs->rdi, regs->rsi, regs->rdx);
                 break;
         case SYS_CREAT:
-                printf("CREAT syscall on file:");
+                printf("Trying to create file:");
                 peek_str(pid, regs->rdi);
                 break;
         case SYS_OPENAT:
                 printf("OPENAT syscall on file:");
                 peek_str(pid, regs->rsi);
+                follow_up = 1;
                 break;
         default:
                 printf("Unhandled syscall: %d", regs->orig_rax);
@@ -136,7 +140,7 @@ int print_syscall_info(pid_t pid, struct user_regs_struct *regs)
         }
         printf("\n");
 
-        return 0;
+        return follow_up;
 }
 
 
@@ -149,14 +153,13 @@ int peek_str(pid_t pid, unsigned long long addr)
         } word;
         int i = 0;
         
-        while (1) {
+        while (i < MAX_CHAR_PEEK) {
                 word.val = ptrace(PTRACE_PEEKDATA, pid, addr + i * 4, 0);
                 i++;
                 for (int j = 0; j < 4; j++) {
                         if (word.c[j] == '\0') return 0;
                         printf("%c", word.c[j]);
                 }
-                if (i > MAX_CHAR_PEEK) break;
         }
 
         return 0;
