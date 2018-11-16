@@ -1,7 +1,14 @@
-arch := $(shell uname -m)
+ARCH := $(shell uname -m | head -c 3)
+FLAGS = -Wall
 
-ifeq ($(arch),x86_64)
+ifeq ($(ARCH),x86)
 all: x86/syscall-trapper.c
-	@echo $(arch)
+@echo $(ARCH)
 	gcc x86/syscall-trapper.c -o syscall-trapper
+else
+ifeq ($(ARCH),arm)
+all: 
+	@echo $(ARCH)
+	gcc ARM64/syscall-trapper.c -o syscall-trapper
+endif
 endif
