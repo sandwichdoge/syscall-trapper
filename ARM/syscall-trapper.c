@@ -13,14 +13,14 @@
 #define MAX_CHAR_PEEK 1024
 
 //Just some example syscalls
-//http://blog.rchapman.org/posts/Linux_System_Call_Table_for_x86_64/
-enum syscalls {SYS_READ = 0, SYS_WRITE, SYS_OPEN, SYS_CLOSE, SYS_STAT,
-                        SYS_FSTAT, SYS_LSTAT, SYS_POLL, SYS_LSEEK, SYS_MMAP,
-                        SYS_MPROTECT, SYS_MUNMAP, SYS_BRK, SYS_IOCTL = 16,
-                        SYS_ACCESS = 21,
-                        SYS_DUP2 = 33,
-                        SYS_FCNTL = 72,
-                        SYS_CREAT = 85, SYS_OPENAT = 257};
+//https://w3challs.com/syscalls/?arch=arm_strong
+//r7 for syscall, r0 for 1st arg, r0 for retval
+enum syscalls {SYS_READ = 3, SYS_WRITE, SYS_OPEN, SYS_CLOSE, SYS_CREAT = 8,
+			SYS_LINK, SYS_UNLINK,
+			SYS_ACCESS = 33,
+			SYS_BRK = 45,
+			SYS_IOCTL = 54, SYS_FCNTL,
+                        SYS_OPENAT = 322};
 
 
 int print_syscall_info(pid_t pid, struct user_regs *regs);
@@ -82,16 +82,16 @@ int print_syscall_info(pid_t pid, struct user_regs *regs)
 	/*each register holds a value of size long, we have 18 registers*/	
 	unsigned long r[18] = {0};
 	memcpy(r, regs, sizeof(r));
-	unsigned long syscall = r[0];
+	unsigned long syscall = r[7];
 
         switch (syscall) {
         case SYS_READ:
-                printf("READ %d bytes on fd:%d", r[2], r[1]);
-                if (PRINT_BUFFER) peek_str(pid, r[3]);
+                printf("READ %d bytes on fd:%d", r[2], r[0]);
+                if (PRINT_BUFFER) peek_str(pid, r[1]);
                 break;
         case SYS_WRITE:
-                printf("WRITE %d bytes on fd:%d", r[2], r[1]);
-                if (PRINT_BUFFER) peek_str(pid, r[3]);
+                printf("WRITE %d bytes on fd:%d", r[2], r[0]);
+                if (PRINT_BUFFER) peek_str(pid, r[1]);
                 break;
 /*
         case SYS_OPEN:
@@ -144,7 +144,7 @@ int print_syscall_info(pid_t pid, struct user_regs *regs)
                 follow_up = 1;
                 break;*/
         default:
-                printf("Unhandled syscall: %d", r[0]);
+                printf("Unhandled syscall: %d", syscall);
                 break;
         }
         printf("\n");
