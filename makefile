@@ -7,8 +7,8 @@ all: x86/syscall-trapper.c
 	gcc x86/syscall-trapper.c -o syscall-trapper
 else
 ifeq ($(ARCH),arm)
-all: 
+all: ARM/syscall-trapper.c
 	@echo $(ARCH)
-	gcc ARM64/syscall-trapper.c -o syscall-trapper
+	gcc ARM/syscall-trapper.c -o syscall-trapper
 endif
 endif

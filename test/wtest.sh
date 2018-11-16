@@ -1,2 +1,2 @@
 echo here
-echo test > sample.txt
+echo test > test/sample.txt

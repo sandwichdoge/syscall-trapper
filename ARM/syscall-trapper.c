@@ -20,6 +20,8 @@ enum syscalls {SYS_READ = 3, SYS_WRITE, SYS_OPEN, SYS_CLOSE, SYS_CREAT = 8,
 			SYS_ACCESS = 33,
 			SYS_BRK = 45,
 			SYS_IOCTL = 54, SYS_FCNTL,
+			SYS_DUP2 = 63,
+			SYS_STAT = 106,
                         SYS_OPENAT = 322};
 
 
@@ -31,9 +33,9 @@ int PRINT_BUFFER = 0; //print read/written data
 int main(int argc, char **argv)
 {
         char **cmd = argv + 1;
-        int status = 0;
+	int status = 0;
         int follow_up = 0; //follow up to print result
-	printf("tracing\n");
+
         pid_t pid = fork();
         switch (pid) {
         case -1:
@@ -67,7 +69,7 @@ int main(int argc, char **argv)
                         ptrace(PTRACE_GETREGS, pid, 0, &regs);
                         if (follow_up) printf("Returned: %d\n", *(&regs));
                         //[WE CAN INTERCEPT RETURN VALUE HERE]
-                        
+
                         if (WIFEXITED(status)) break; //child exited
                 }
         }
@@ -93,20 +95,26 @@ int print_syscall_info(pid_t pid, struct user_regs *regs)
                 printf("WRITE %d bytes on fd:%d", r[2], r[0]);
                 if (PRINT_BUFFER) peek_str(pid, r[1]);
                 break;
-/*
         case SYS_OPEN:
                 printf("OPEN syscall on file:");
-                peek_str(pid, regs->rdi);
+                peek_str(pid, r[0]);
                 follow_up = 1;
                 break;
         case SYS_CLOSE:
-                printf("CLOSE syscall on fd:%d", regs->rdi);
+                printf("CLOSE syscall on fd:%d", r[0]);
                 break;
         case SYS_STAT:
                 printf("STAT syscall on file:");
-                peek_str(pid, regs->rdi);
+                peek_str(pid, r[0]);
                 break;
-        case SYS_FSTAT:
+	case SYS_ACCESS:
+		printf("ACCESS syscall on file:");
+		peek_str(pid, r[0]);
+		break;
+	case SYS_DUP2:
+		printf("DUP2 syscall, old fd:%d, new fd:%d", r[0], r[1]);
+		break;
+/*        case SYS_FSTAT:
                 printf("FSTAT syscall on fd:%d", regs->rdi);
                 break;
         case SYS_LSEEK:
@@ -123,10 +131,6 @@ int print_syscall_info(pid_t pid, struct user_regs *regs)
                 break;
         case SYS_IOCTL:
                 printf("IOCTL syscall on fd:%d, cmd: %d, arg: %ld", regs->rdi, regs->rsi, regs->rdx);
-                break;
-        case SYS_ACCESS: //21
-                printf("ACCESS syscall on file:");
-                peek_str(pid, regs->rdi);
                 break;
         case SYS_DUP2: //33
                 printf("DUP2 syscall, old fd:%d, new fd:%d", regs->rdi, regs->rsi);
